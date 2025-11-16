@@ -58,18 +58,23 @@ def symmetry_group(mss):
             except ValueError:
                 pass
         return try1()
-    row = lambda m: next(r for r in m.rows() if not r.is_zero())
+    row = lambda m: list(next(r for r in m.rows() if not r.is_zero()))
     column = lambda m: row(m.T)
     mss111 = [ ms for ms in mss if all(m.rank() == 1 for m in ms) ]
 
-    us = [list(v) for a,b,c in mss111 for v in [row(a), column(a), row(b), column(b), row(c), column(c)]]
+    uss = [[column(a) for a,b,c in mss111],
+           [row(a) for a,b,c in mss111],
+           [column(b) for a,b,c in mss111],
+           [row(b) for a,b,c in mss111],
+           [column(c) for a,b,c in mss111],
+           [row(c) for a,b,c in mss111]]
     g = approximate_symmetry_group(mss111,2)
     print(f'Containing symmetry group has order {g.Order()}')
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
-    frame_ixs = [[6*i+2*((f+1)%3)+1+1 for i in general_frame_indices(M)] for f,M in enumerate(Ms)]
+    frame_ixs = [[i+1 for i in general_frame_indices(M)] for f,M in enumerate(Ms)]
     gap.Read('"compute_symmetry.g"');
-    # print(f'us:={gap(us)};\ng:={gap(g)};frame_ixs:={gap(frame_ixs)};\nmss:={gap(mss)};')
-    return gap.SymmetryGroupUsingPoints(us, g, frame_ixs, mss)
+    # print(f'uss:={gap(uss)};\ng:={gap(g)};frame_ixs:={gap(frame_ixs)};\nmss:={gap(mss)};')
+    return gap.SymmetryGroupUsingPoints(uss, g, frame_ixs, mss)
 
 # View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our
 # decomposition terms having distinguished lifts to A op B op C. Similarly, we
@@ -89,8 +94,8 @@ def symmetry_group(mss):
 # corresponding to the post action in each tensor factor required to return to
 # the distinguished lift.
 
-# If rep is a linear representation, the three class functions are linear
-# characters. 
+# If rep is a linear representation with no transpose action, the three class
+# functions are linear characters. 
 def orbit_structure(rep,mss):
     gap.Read('"compute_symmetry.g"')
     return gap.OrbitStructure(rep,mss)
@@ -118,7 +123,7 @@ def approximate_symmetry_group(mss,maxsize=2):
 
     # local factors transform together, preserving the local sizes
     a,b,c = mss[0]
-    local_sizes = [ a.nrows(), a.ncols(), b.nrows(), b.ncols(), c.nrows(), c.ncols() ]
+    local_sizes = [ a.ncols(), a.nrows(), b.ncols(), b.nrows(), c.ncols(), c.nrows() ]
     vertex_colors.extend([[vertices+j for j,_ in fs] for _, fs in \
                           groupby(sorted(enumerate(local_sizes),key = lambda p: p[1]), key = lambda p: p[1])])
     for i in range(len(mss)):
