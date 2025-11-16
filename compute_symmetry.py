@@ -68,29 +68,42 @@ def symmetry_group(mss):
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
     frame_ixs = [[6*i+2*((f+1)%3)+1+1 for i in general_frame_indices(M)] for f,M in enumerate(Ms)]
     gap.Read('"compute_symmetry.g"');
-    g, tripForPerm = gap.SymmetryGroupUsingPoints(us, g, frame_ixs, mss)
-    return (g,tripForPerm)
+    # print(f'us:={gap(us)};\ng:={gap(g)};frame_ixs:={gap(frame_ixs)};\nmss:={gap(mss)};')
+    return gap.SymmetryGroupUsingPoints(us, g, frame_ixs, mss)
 
-# View a ot b ot c in A ot B ot C as living in A op B op C / C^2 with our
-# decomposition terms having distinguished lifts. Similarly, we have an
-# action defined in GL(A) x GL(B) x GL(C) / C^2, and we have distinguished
-# lifts by asking that the first nonzero entry is 1 in the corresponding
-# elements of GL(U), GL(V), GL(W). Note that we make no effort to pick
-# distinguished lifts with any nice property (such as forming a subgroup), as
-# these are not guaranteed to exist. For each orbit, we pick a point a op b op
-# c, record its stabilizer h, and record for each element e in h the element of
-# C^2 required to bring e . (a op b op c) back to a op b op c. Observe that
-# this data is constant along conjugacy classes of h, so we record this
-# information for each class. So, for each orbit we give h and 3 class
-# functions of h multiplying to 1, corresponding to the post action in each
-# tensor factor required to return to the distinguished lift.
+# View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our
+# decomposition terms having distinguished lifts to A op B op C. Similarly, we
+# have an action defined in GL(A) x GL(B) x GL(C) / C^2 with distinguished
+# lifts to GL(A) x GL(B) x GL(C) (ignoring factor permutation symmetries for
+# clarity). 
 
-# If our projective representation is actually a linear representations (ie if
-# we can choose distinguished lifts of g forming a subgroup), the three class
-# functions are linear characters. 
-def orbit_structure(g,tripForPerm,mss):
-    gap.Read('"compute_symmetry.g"');
-    return gap.OrbitStructure(g,tripForPerm,mss)
+# If rep is given by a linear representation, our distinguished lifts form a
+# subgroup of GL(A) x GL(B) x GL(C). We do not insist on this though, and can
+# describe the orbit structure even for a strictly projective representation.
+
+# For each orbit, we pick a point a op b op c, record its stabilizer h, and
+# record for each element e in h the element of C^2 required to bring e . (a op
+# b op c) back to a op b op c. Observe that this data is constant along
+# conjugacy classes of h, so we record this information for each class. So, for
+# each orbit we give h and 3 class functions of h multiplying to 1,
+# corresponding to the post action in each tensor factor required to return to
+# the distinguished lift.
+
+# If rep is a linear representation, the three class functions are linear
+# characters. 
+def orbit_structure(rep,mss):
+    gap.Read('"compute_symmetry.g"')
+    return gap.OrbitStructure(rep,mss)
+
+# Try to find a linear representation corresponding to the PGL representation
+# of the input, if necessary passing to a group extension. An attempt is made
+# to simplify the extension needed as much as possible. 
+def linearize_representation(rep):
+    gap.Read('"compute_symmetry.g"')
+    res = gap.LinearizeRepresentation(rep)
+    if res == gap('fail'):
+        raise ValueError("Could not lift to linear representation")
+    return res
     
 # Compute a group preserving a large set of invariants, and thus one which will
 # certainly contain, and many times be equal to, the true group. The group is
