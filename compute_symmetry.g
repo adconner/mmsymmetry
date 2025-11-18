@@ -1,13 +1,25 @@
-FrameMap := function(M)
-  local i,res,vec,inv,d;
-  res := M{[1..Length(M)-1]};
-  vec := SolutionMat(res, M[Length(M)]);
-  if vec = fail then return fail; fi;
-  for i in [1..Length(vec)] do
-    if IsZero(vec[i]) then return fail; fi;
-    res[i] := vec[i] * res[i];
+LoadPackage("gauss");
+
+# Pick a PGL transformation normalizing the column vectors of M in some way, if it exists
+ProjectiveNormalizationMap := function(M)
+  local v,n,i,j,ifirst;
+  v := Length(M);
+  n := Length(M[1]);
+  M := TransposedMat(Concatenation(TransposedMat(M), IdentityMat(v)));
+  M := MutableCopyMat(EchelonMat(M).vectors);
+  for i in [2..v] do
+    for j in [1..n] do
+      if IsZero(M[i][j]) then
+        continue;
+      fi;
+      ifirst := First([1..v],i->not IsZero(M[i][j]));
+      if ifirst >= i then
+        continue;
+      fi;
+      M[i] := M[i] * M[ifirst,j] / M[i,j];
+    od;
   od;
-  return res;
+  return List(M, r->r{[n+1..n+v]});
 end;
 
 TripAction := function (gs,fac_perm,ms)
@@ -19,10 +31,8 @@ TripAction := function (gs,fac_perm,ms)
   return ms;
 end;
 
-
-LoadPackage("gauss");
-SymmetryGroupUsingPoints := function(uss, g, frame_ixs, mss)
-  local local_fac_perm_map, term_perm_map111, to3fac, normalize, 
+SymmetryGroupUsingPoints := function(uss, g, mss)
+  local local_fac_perm_map, term_perm_map111, to3fac, normalize, num111,
         tripForPerm111, gens, term_perm_map, tripf, det1Mult;
 
   local_fac_perm_map := ActionHomomorphism(g, List([1..6], j->List([0..Length(uss[1])-1], i->6*i+j)), OnSets);
@@ -37,15 +47,16 @@ SymmetryGroupUsingPoints := function(uss, g, frame_ixs, mss)
   end;
   mss := List(mss, normalize);
 
+  num111 := Length(uss[1]);
   tripForPerm111 := function(sigma)
     local gs, fac_perm, target_mss, perm;
     gs := List([1..3], function (f) 
-      local m, fr, lfac;
-      fr := frame_ixs[f];
+      local m, lfac;
       lfac := 2*(f mod 3) + 1;
-      m := FrameMap(uss [lfac^(sigma^local_fac_perm_map)]{ List(fr,i->i^(sigma^term_perm_map111)) });
+      m := ProjectiveNormalizationMap(TransposedMat(
+        Permuted(uss [lfac^(Inverse(sigma)^local_fac_perm_map)], sigma^term_perm_map111)));
       if m <> fail then
-        m := TransposedMat(m) * Inverse(TransposedMat(FrameMap(uss[lfac]{fr})));
+        m := Inverse(m) * ProjectiveNormalizationMap(TransposedMat(uss[lfac]));
         m := m / First(Concatenation(m), e->not IsZero(e));
         return m;
       fi;
@@ -183,3 +194,4 @@ LinearizeRepresentation := function(proj_rep)
     fac_perm_map := epiToPGL * proj_rep.fac_perm_map,
     epiToPGL := epiToPGL);
 end;
+

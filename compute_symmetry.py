@@ -38,30 +38,9 @@ import random
 # Solve the problem where mss contains matrix triples of rank 1,1,1, with
 # sufficiently many column spaces in general position
 def symmetry_group(mss):
-    # Find M.nrows() + 1 colmuns of M in general position.
-    # This can fail to find a solution even if it exists but should succeed in
-    # the common case. If we need to we can try harder here. 
-    def general_frame_indices(M,tries=10):
-        def try1():
-            cols = list(range(M.ncols()))
-            random.shuffle(cols)
-            Me = M[:,cols].echelon_form()
-            jxs = Me.pivots()
-            try:
-                jxs += (next(j for j in range(jxs[-1]+1,Me.ncols()) if all(e != 0 for e in Me[:,j])),)
-                return tuple(sorted([cols[j] for j in jxs]))
-            except StopIteration:
-                raise ValueError("general_frame_indices: Did not find general frame")
-        for t in range(tries-1):
-            try:
-                return try1()
-            except ValueError:
-                pass
-        return try1()
     row = lambda m: list(next(r for r in m.rows() if not r.is_zero()))
     column = lambda m: row(m.T)
     mss111 = [ ms for ms in mss if all(m.rank() == 1 for m in ms) ]
-
     uss = [[column(a) for a,b,c in mss111],
            [row(a) for a,b,c in mss111],
            [column(b) for a,b,c in mss111],
@@ -71,10 +50,9 @@ def symmetry_group(mss):
     g = approximate_symmetry_group(mss111,2)
     print(f'Containing symmetry group has order {g.Order()}')
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
-    frame_ixs = [[i+1 for i in general_frame_indices(M)] for f,M in enumerate(Ms)]
     gap.Read('"compute_symmetry.g"');
-    # print(f'uss:={gap(uss)};\ng:={gap(g)};frame_ixs:={gap(frame_ixs)};\nmss:={gap(mss)};')
-    return gap.SymmetryGroupUsingPoints(uss, g, frame_ixs, mss)
+    # print(f'uss:={gap(uss)};\ng:={gap(g)};\nmss:={gap(mss)};')
+    return gap.SymmetryGroupUsingPoints(uss, g, mss)
 
 # View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our
 # decomposition terms having distinguished lifts to A op B op C. Similarly, we
