@@ -51,7 +51,7 @@ def symmetry_group(mss):
     print(f'Containing symmetry group has order {g.Order()}')
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
     gap.Read('"compute_symmetry.g"');
-    # print(f'uss:={gap(uss)};\ng:={gap(g)};\nmss:={gap(mss)};')
+    #print(f'uss:={gap(uss)};\ng:={gap(g)};\nmss:={gap(mss)};')
     return gap.SymmetryGroupUsingPoints(uss, g, mss)
 
 # View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our

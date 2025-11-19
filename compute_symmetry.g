@@ -32,7 +32,7 @@ TripAction := function (gs,fac_perm,ms)
 end;
 
 SymmetryGroupUsingPoints := function(uss, g, mss)
-  local local_fac_perm_map, term_perm_map111, to3fac, normalize, num111,
+  local local_fac_perm_map, term_perm_map111, to3fac, normalize,
         tripForPerm111, gens, term_perm_map, tripf, det1Mult;
 
   local_fac_perm_map := ActionHomomorphism(g, List([1..6], j->List([0..Length(uss[1])-1], i->6*i+j)), OnSets);
@@ -47,30 +47,25 @@ SymmetryGroupUsingPoints := function(uss, g, mss)
   end;
   mss := List(mss, normalize);
 
-  num111 := Length(uss[1]);
   tripForPerm111 := function(sigma)
-    local gs, fac_perm, target_mss, perm;
-    gs := List([1..3], function (f) 
-      local m, lfac;
-      lfac := 2*(f mod 3) + 1;
+    local gs, fac_perm, perm;
+    gs := List([3,5,1], function (f) 
+      local m;
       m := ProjectiveNormalizationMap(TransposedMat(
-        Permuted(uss [lfac^(Inverse(sigma)^local_fac_perm_map)], sigma^term_perm_map111)));
-      if m <> fail then
-        m := Inverse(m) * ProjectiveNormalizationMap(TransposedMat(uss[lfac]));
-        m := m / First(Concatenation(m), e->not IsZero(e));
-        return m;
-      fi;
-      return fail;
+        Permuted(uss [f^(sigma^local_fac_perm_map)], Inverse(sigma)^term_perm_map111)));
+      Assert(0, m <> fail);
+      m := Inverse(m) * ProjectiveNormalizationMap(TransposedMat(uss[f]));
+      m := m / First(Concatenation(m), e->not IsZero(e));
+      return m;
     end);
-    if ForAny(gs, g-> g = fail) then
-      return fail;
-    fi;
     fac_perm := sigma^(local_fac_perm_map*to3fac);
-    target_mss := List(mss, ms -> normalize(TripAction(gs,fac_perm,ms)));
-    if SSortedList(mss) <> SSortedList(target_mss) then
+    perm := Permutation((), mss, function (ms, e)
+      return normalize(TripAction(gs,fac_perm,ms));
+    end);
+    if perm = fail then
       return fail;
     fi;
-    perm := SortingPerm(target_mss) * Inverse(SortingPerm(mss));
+    Assert(1, Permutation(perm, Filtered([1..Length(mss)],i-> ForAll(mss[i],m->RankMat(m) = 1))) = sigma ^ term_perm_map111);
     
     # gs are currently normalized, so further transformations will retain the
     # property of being a distinguished representatives mod C^*.
@@ -111,7 +106,7 @@ SymmetryGroupUsingPoints := function(uss, g, mss)
   tripf := function(sigma)
     local p;
     p := tripForPerm111(sigma);
-    Assert(0, sigma^term_perm_map = p.perm);
+    Assert(1, sigma^term_perm_map = p.perm);
     return p.gs;
   end;
   return rec(g := g, tripf := tripf, term_perm_map := term_perm_map, 
@@ -133,7 +128,7 @@ OrbitStructure := function(rep,mss)
       ms_transform := TripAction(rep.tripf(Representative(cl)),Representative(cl) ^ rep.fac_perm_map,ms);
       cur := List([1..3], f-> 
         First(Concatenation(ms_transform[f]),e->not IsZero(e)) / First(Concatenation(ms[f]),e->not IsZero(e)));
-      Assert(0,ForAll([1..3], f-> ms[f]*cur[f] = ms_transform[f]));
+      Assert(1,ForAll([1..3], f-> ms[f]*cur[f] = ms_transform[f]));
       return cur;
     end);
     Add(res,[h, List([1..3], f-> ClassFunction(h,List(vals, p -> p[f])))]);
@@ -142,26 +137,53 @@ OrbitStructure := function(rep,mss)
 end;
 
 LinearizeRepresentation := function(proj_rep)
-  local to3fac, tripToMat, matToTrip, G, epiToPGL, K, tryRemove, h, Gred, mono;
+  local to3fac, gsizes, bstart, i, tripToMat, matToTrip, G, epiToPGL, K, tryRemove, h, Gred, mono;
   to3fac := [(1,4)(2,3)(5,6), (1,2)(3,6)(4,5)];
-  to3fac := GroupHomomorphismByImages(Group(to3fac), SymmetricGroup(3), to3fac,  [(1,2), (2,3)]);
+  to3fac := GroupHomomorphismByImages(Group(to3fac), SymmetricGroup(3), to3fac, [(1,2), (2,3)]);
+  gsizes := List(proj_rep.tripf(Identity(proj_rep.g)), g->Length(g[1]));
+  bstart := [0, gsizes[3], gsizes[1], gsizes[1], gsizes[2], gsizes[2], gsizes[3]];
+  for i in [2..7] do
+    bstart[i] := bstart[i] + bstart[i-1];
+  od;
   tripToMat := function(trip, fac_perm)
-    local dblocks;
-    dblocks := [TransposedMat(trip[3]), Inverse(trip[1]), TransposedMat(trip[1]), 
+    local blocks,i,M,bi,bj;
+    blocks := [TransposedMat(trip[3]), Inverse(trip[1]), TransposedMat(trip[1]), 
         Inverse(trip[2]), TransposedMat(trip[2]), Inverse(trip[3])];
-    return BlockMatrix(List([1..6], i-> [i, i^PreImageElm(to3fac,fac_perm), dblocks[i]]),6,6);
+    M := ZeroMatrix(bstart[7], bstart[7], blocks[1]);
+    for bi in [1..6] do
+      for i in [bstart[bi]+1..bstart[bi+1]] do
+        bj := bi^PreImageElm(to3fac, fac_perm);
+        M[i]{[bstart[bj]+1..bstart[bj+1]]} := blocks[bi][i-bstart[bi]];
+      od;
+    od;
+    return M;
   end;
+  Assert(1,ForAll(Cartesian(proj_rep.g,proj_rep.g), function(p)
+    local f;
+    f := e -> tripToMat(proj_rep.tripf(e),e^proj_rep.fac_perm_map);
+    return IsDiagonalMat(f(p[1])*f(p[2]) *Inverse(f(p[1]*p[2])));
+  end));
   matToTrip := function(M)
-    local n, perm, gs, fac_perm;
-    n := Length(M) / 6;
-    perm := PermList(List([1..6], i-> QuoInt(PositionProperty(M[(i-1)*n+1], e->not IsZero(e))-1,n)+1));
-    gs := List([1..3],f -> TransposedMat(List([1..n], i->
-        M[ (f mod 3)*2*n + i ]{[((2*(f mod 3)+1)^perm-1)*n+1..((2*(f mod 3)+1)^perm)*n]})));
-    return gs;
-    #fac_perm := perm ^ to3fac;
-    #return [gs,fac_perm];
+    local perm, gs, fac_perm;
+    perm := PermList(List([1..6], function(i)
+      local j;
+      j := PositionProperty(M[bstart[i]+1], e->not IsZero(e));
+      return First([1..6], i->j <= bstart[i+1]);
+    end));
+    gs := List([3,5,1],bi ->
+      List([bstart[bi]+1..bstart[bi+1]],i -> M[i]{[bstart[bi^perm]+1..bstart[bi^perm+1]]}));
+    gs := List(gs, TransposedMat);
+    fac_perm := perm ^ to3fac;
+    return [gs,fac_perm];
   end;
+  Assert(1,ForAll(proj_rep.g, function(e)
+    local trip, fac_perm;
+    trip := proj_rep.tripf(e);
+    fac_perm := e ^ proj_rep.fac_perm_map;
+    return matToTrip(tripToMat(trip, fac_perm)) = [trip, fac_perm];
+  end));
   G := Group(List(GeneratorsOfGroup(proj_rep.g), e -> tripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map)));
+  epiToPGL := List(GeneratorsOfGroup(proj_rep.g), e -> tripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map));
   if Size(G) = infinity then
     # This means that when we chose scalings to put the determinant close to
     # the unit circle failed to put the requisite determinants exactly on the
@@ -189,9 +211,8 @@ LinearizeRepresentation := function(proj_rep)
   mono := NiceMonomorphism(Source(epiToPGL));
   G := Image(mono);
   epiToPGL := RestrictedMapping(InverseGeneralMapping(mono),G) * epiToPGL;
-  return rec(g := Image(mono), tripf := e -> matToTrip(PreImageElm(mono, e)), 
+  return rec(g := Image(mono), tripf := e -> matToTrip(PreImageElm(mono, e))[1],
     term_perm_map := epiToPGL * proj_rep.term_perm_map,
     fac_perm_map := epiToPGL * proj_rep.fac_perm_map,
     epiToPGL := epiToPGL);
 end;
-
