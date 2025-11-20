@@ -31,7 +31,7 @@
 # general position to quickly determine a PGL equivalence if it exists. This is
 # done in symmetry_group below
 
-from sage.all import *
+from sage.all import gap,matrix,UniversalCyclotomicField
 from itertools import groupby
 import util
 

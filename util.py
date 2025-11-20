@@ -1,8 +1,8 @@
-from sage.all import *
+import re
+from sage.all import matrix,QQ,sage_eval,gap
 
 # load decomposition from https://fmm.univ-lille.fr/
 def from_univ_lille(file,locals={}):
-    import re
     t = open(file).read()
     t = re.search(r'TriadSet\((.*)\):',t).group(1)
     t = re.sub(r'Matrix\(\d, \d, (.*?)\)',r'\1',t)

@@ -1,6 +1,6 @@
-from sage.all import *
-from itertools import product
+from sage.all import gap,matrix,UniversalCyclotomicField
 import numpy as np
+from itertools import product
 
 def get_map_to_rank1s(rep,orbit_structure):
     g = rep['g']
@@ -45,12 +45,11 @@ def get_map_to_rank1s(rep,orbit_structure):
         orbit_embeds.append((embeds,xbounds))
         params += embed1.nrows()
 
-    u,v,w = [int(m[1].Length()) for m in tripf(g.Identity())]
+    m,n,l = [int(m[1].Length()) for m in tripf(g.Identity())]
     def param_to_trips(x,np=np):
         res = np.vstack([ np.einsum('ijk,i->jk', embed, x[xstart:xend]) for embed, (xstart, xend) in orbit_embeds ])
-        return (res[:, :w*u], res[:, w*u:w*u+u*v], res[:, w*u+u*v:])
+        return (res[:, :l*m], res[:, l*m:l*m+m*n], res[:, l*m+m*n:])
     
-    # return orbit_embeds
     return param_to_trips, params
-        
-    
+
+
