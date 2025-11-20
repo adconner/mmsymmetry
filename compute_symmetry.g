@@ -126,16 +126,16 @@ OrbitStructure := function(rep,mss)
   for orbit in orbits do
     term := orbit[1];
     h := Stabilizer(rep.g, term, act);
-    vals := List(ConjugacyClasses(h), function(cl) 
-      local ms,ms_transform,cur;
+    Add(res,[h, List(GeneratorsOfGroup(h), function(e) 
+      local ms,ms_transform,cur,m;
       ms := mss[term];
-      ms_transform := TripAction(rep.tripf(Representative(cl)),Representative(cl) ^ rep.fac_perm_map,ms);
+      ms_transform := TripAction(rep.tripf(e),e ^ rep.fac_perm_map,ms);
       cur := List([1..3], f-> 
         First(Concatenation(ms_transform[f]),e->not IsZero(e)) / First(Concatenation(ms[f]),e->not IsZero(e)));
       Assert(1,ForAll([1..3], f-> ms[f]*cur[f] = ms_transform[f]));
-      return cur;
-    end);
-    Add(res,[h, List([1..3], f-> ClassFunction(h,List(vals, p -> p[f])))]);
+      m := PermutationMat(e ^ rep.fac_perm_map,3);
+      return List(m, r->List([1..3], i-> r[i]*cur[i]));
+    end)]);
   od;
   return res;
 end;

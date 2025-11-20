@@ -65,15 +65,14 @@ def symmetry_group(mss):
 # describe the orbit structure even for a strictly projective representation.
 
 # For each orbit, we pick a point a op b op c, record its stabilizer h, and
-# record for each element e in h the element of C^2 required to bring e . (a op
-# b op c) back to a op b op c. Observe that this data is constant along
-# conjugacy classes of h, so we record this information for each class. So, for
-# each orbit we give h and 3 class functions of h multiplying to 1,
-# corresponding to the post action in each tensor factor required to return to
-# the distinguished lift.
+# record for a generating set of h the element of C^2 : S^3 required to bring e
+# . (a op b op c) back to a op b op c, encoded as a 3x3 matrix with support
+# given by the associated factor permutation.
 
-# If rep is a linear representation with no transpose action, the three class
-# functions are linear characters. 
+# If rep is a linear representation with no transpose action, the map h -> C^3
+# : S^3 matrices is a group homomorphism. In particular, if h does not permute
+# the factors, the data consists of 3 linear characters tensoring to the
+# trivial character.
 def orbit_structure(rep,mss):
     rep = util.dict_to_rec(rep)
     gap.Read('"compute_symmetry.g"')
