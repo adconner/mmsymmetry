@@ -33,6 +33,7 @@
 
 from sage.all import *
 from itertools import groupby
+import util
 
 # Solve the problem where mss contains matrix triples of rank 1,1,1, with
 # sufficiently many column spaces in general position
@@ -51,7 +52,7 @@ def symmetry_group(mss):
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
     gap.Read('"compute_symmetry.g"');
     # print(f'uss:={gap(uss)};\ng:={gap(g)};\nmss:={gap(mss)};')
-    return gap.SymmetryGroupUsingPoints(uss, g, mss)
+    return util.rec_to_dict(gap.SymmetryGroupUsingPoints(uss, g, mss))
 
 # View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our
 # decomposition terms having distinguished lifts to A op B op C. Similarly, we
@@ -74,6 +75,7 @@ def symmetry_group(mss):
 # If rep is a linear representation with no transpose action, the three class
 # functions are linear characters. 
 def orbit_structure(rep,mss):
+    rep = util.dict_to_rec(rep)
     gap.Read('"compute_symmetry.g"')
     return gap.OrbitStructure(rep,mss)
 
@@ -81,11 +83,12 @@ def orbit_structure(rep,mss):
 # of the input, if necessary passing to a group extension. An attempt is made
 # to simplify the extension needed as much as possible. 
 def linearize_representation(rep):
+    rep = util.dict_to_rec(rep)
     gap.Read('"compute_symmetry.g"')
     res = gap.LinearizeRepresentation(rep)
     if res == gap('fail'):
         raise ValueError("Could not lift to linear representation")
-    return res
+    return util.rec_to_dict(res)
     
 # Compute a group preserving a large set of invariants, and thus one which will
 # certainly contain, and many times be equal to, the true group. The group is
