@@ -102,7 +102,11 @@ SymmetryGroupUsingPoints := function(uss, g, mss)
   g := SubgroupProperty(g, e -> tripForPerm111(e) <> fail);
   gens := List(GeneratorsOfGroup(g), tripForPerm111);
 
-  term_perm_map := GroupHomomorphismByImages(g, Group(List(gens, p->p.perm)));
+  if Size(g) > 1 then
+    term_perm_map := GroupHomomorphismByImages(g, Group(List(gens, p->p.perm)));
+  else
+    term_perm_map := GroupHomomorphismByImages(g, g);
+  fi;
   tripf := function(sigma)
     local p;
     p := tripForPerm111(sigma);
@@ -216,3 +220,6 @@ LinearizeRepresentation := function(proj_rep)
     fac_perm_map := epiToPGL * proj_rep.fac_perm_map,
     epiToPGL := epiToPGL);
 end;
+
+# prep := SymmetryGroupUsingPoints(uss, g, mss);
+# rep := LinearizeRepresentation(prep);
