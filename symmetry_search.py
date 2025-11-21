@@ -52,4 +52,19 @@ def get_map_to_rank1s(rep,orbit_structure):
     
     return param_to_trips, params
 
+def matrixmult(m,n,l):
+    T=np.zeros((l*m,m*n,n*l))
+    for i,j,k in product(range(m),range(n),range(l)):
+        T[k*m+i, i*n+j, j*l+i] = 1
+    return T
 
+def evaluate(m,n,l, rep, orbit_structure, x, post = None):
+    T = matrixmult(m,n,l)
+    tripf, params = get_map_to_rank1s(rep, orbit_structure)
+    assert x.shape == (params,)
+    u,v,w = tripf(x)
+    if post is not None:
+        u,v,w = post(u,v,w)
+    residual = np.einsum('ir,jr,kr->ijk',u,v,w) - matrixmult(m,n,l)
+    return np.linalg.norm(residual)
+    
