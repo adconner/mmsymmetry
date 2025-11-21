@@ -233,5 +233,11 @@ LinearizeRepresentation := function(proj_rep)
     epiToPGL := epiToPGL);
 end;
 
+RepresentationMatHom := function(rep)
+  local imgs;
+  imgs := List(GeneratorsOfGroup(rep.g), e->TripToMat(rep.tripf(e), e ^ rep.fac_perm_map));
+  return GroupGeneralMappingByImages(rep.g, GeneratorsOfGroup(rep.g), imgs);
+end;
+
 # prep := SymmetryGroupUsingPoints(uss, g, mss);
 # rep := LinearizeRepresentation(prep);

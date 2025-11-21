@@ -1,4 +1,4 @@
-from sage.all import gap,matrix,UniversalCyclotomicField
+from sage.all import gap,matrix,UniversalCyclotomicField,block_matrix,identity_matrix,sqrt
 import numpy as np
 from itertools import product
 
@@ -48,14 +48,14 @@ def get_map_to_rank1s(rep,orbit_structure):
     m,n,l = [int(m[1].Length()) for m in tripf(g.Identity())]
     def param_to_trips(x,np=np):
         res = np.vstack([ np.einsum('ijk,i->jk', embed, x[xstart:xend]) for embed, (xstart, xend) in orbit_embeds ])
-        return (res[:, :l*m], res[:, l*m:l*m+m*n], res[:, l*m+m*n:])
+        return (res[:, :l*m].T, res[:, l*m:l*m+m*n].T, res[:, l*m+m*n:].T)
     
-    return param_to_trips, params
+    return param_to_trips, params, orbit_embeds
 
 def matrixmult(m,n,l):
     T=np.zeros((l*m,m*n,n*l))
     for i,j,k in product(range(m),range(n),range(l)):
-        T[k*m+i, i*n+j, j*l+i] = 1
+        T[k*m+i, i*n+j, j*l+k] = 1
     return T
 
 def evaluate(m,n,l, rep, orbit_structure, x, post = None):
@@ -68,3 +68,13 @@ def evaluate(m,n,l, rep, orbit_structure, x, post = None):
     residual = np.einsum('ir,jr,kr->ijk',u,v,w) - matrixmult(m,n,l)
     return np.linalg.norm(residual)
     
+def get_gap_code(rep,orbit_structure):
+    m,n,l = rep['tripf'](rep['g'].Identity()).List(gap.Length).sage()
+    return f'''g := Group([{','.join([str(e) for e in rep['g'].GeneratorsOfGroup()])}]);
+acts := [ {','.join([ f'\n  [ [ {',\n    '.join([f'{m}' for m in rep['tripf'](e)])} ], {e**rep['fac_perm_map']}]' for e in rep['g'].GeneratorsOfGroup()])} ];
+fac_perm_map := GroupHomomorphismByImages(g, Group(List(acts, p->p[2])));
+acts := List(acts, p -> TripToMat(p[1], p[2]));
+hom := GroupHomomorphismByImages(g,Group(acts));
+tripf := e -> MatToTrip(e ^ hom, [{m},{n},{l}])[1];
+orbits := [ {','.join([ f'\n  [ {h},\n  [ { ',\n    '.join([f'{m}' for m in ms])} ] ]' for h, ms in gap(orbit_structure)])} ];
+'''

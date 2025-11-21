@@ -88,6 +88,16 @@ def linearize_representation(rep):
     if res == gap('fail'):
         raise ValueError("Could not lift to linear representation")
     return util.rec_to_dict(res)
+
+# Convenience function to construct the homomorphism into the 6 local factor
+# wreath product action associated with the representation. If rep is a linear
+# representation, this will be a (single-valued) homomorphism. More generally,
+# it is a gap multivalued map
+def representation_mat_hom(rep):
+    rep = util.dict_to_rec(rep)
+    gap.Read('"compute_symmetry.g"')
+    return gap.RepresentationMatHom(rep)
+
     
 # Compute a group preserving a large set of invariants, and thus one which will
 # certainly contain, and many times be equal to, the true group. The group is

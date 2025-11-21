@@ -1,10 +1,19 @@
 let
-  pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/tarball/9ca440cd0acccda37e3e00120918e1165028ff36") { config = {}; overlays = [
+  pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/tarball/9ca440cd0acccda37e3e00120918e1165028ff36") { 
+    config = {
+      allowUnfree = true;
+    }; 
+    overlays = [
     (self: super: {
       gap = super.gap.override { packageSet = "full"; };
-      sage = super.sage.override { requireSageTests = false; };
-      # sage-env = super.sage-env;
-      # sage-with-env = super.sage-with-env;
+      sage = super.sage.override (prev :{ 
+        requireSageTests = false; 
+        extraPythonPackages = (python-pkgs: with python-pkgs; [
+          jax
+          jax-cuda12-plugin
+          optax
+        ]);
+      });
     })
   ]; };
 in
