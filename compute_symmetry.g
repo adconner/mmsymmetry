@@ -33,7 +33,7 @@ end;
 
 SymmetryGroupUsingPoints := function(uss, g, mss)
   local local_fac_perm_map, term_perm_map111, to3fac, normalize,
-        tripForPerm111, gens, term_perm_map, tripf, det1Mult;
+        tripForPerm111, gens, mono, term_perm_map, fac_perm_map, tripf, det1Mult;
 
   local_fac_perm_map := ActionHomomorphism(g, List([1..6], j->List([0..Length(uss[1])-1], i->6*i+j)), OnSets);
   term_perm_map111 := ActionHomomorphism(g, List([0..Length(uss[1])-1], i->List([1..6], j->6*i+j)), OnSets);
@@ -100,21 +100,27 @@ SymmetryGroupUsingPoints := function(uss, g, mss)
   end;
   
   g := SubgroupProperty(g, e -> tripForPerm111(e) <> fail);
+  g := Group(SmallGeneratingSet(g));
   gens := List(GeneratorsOfGroup(g), tripForPerm111);
-
   if Size(g) > 1 then
     term_perm_map := GroupHomomorphismByImages(g, Group(List(gens, p->p.perm)));
   else
     term_perm_map := GroupHomomorphismByImages(g, g);
   fi;
+  
+  mono := SmallerDegreePermutationRepresentation(g);
+  g := Image(mono);
+  fac_perm_map := RestrictedMapping(InverseGeneralMapping(mono),g) * local_fac_perm_map * to3fac;
+  term_perm_map := RestrictedMapping(InverseGeneralMapping(mono),g) * term_perm_map;
+  
   tripf := function(sigma)
     local p;
-    p := tripForPerm111(sigma);
+    p := tripForPerm111(PreImageElm(mono,sigma));
     Assert(1, sigma^term_perm_map = p.perm);
     return p.gs;
   end;
   return rec(g := g, tripf := tripf, term_perm_map := term_perm_map, 
-    fac_perm_map := local_fac_perm_map * to3fac); # this is a projective representation with distinguished lifts
+    fac_perm_map := fac_perm_map); # this is a projective representation with distinguished lifts
 end;
 
 # rep can either be a linear representation or a projective representation with distinguished lifts
@@ -126,6 +132,7 @@ OrbitStructure := function(rep,mss)
   for orbit in orbits do
     term := orbit[1];
     h := Stabilizer(rep.g, term, act);
+    h := Group(SmallGeneratingSet(h));
     Add(res,[h, List(GeneratorsOfGroup(h), function(e) 
       local ms,ms_transform,cur,m;
       ms := mss[term];
@@ -199,7 +206,6 @@ LinearizeRepresentation := function(proj_rep)
     return MatToTrip(TripToMat(trip, fac_perm), uvw) = [trip, fac_perm];
   end));
   G := Group(List(GeneratorsOfGroup(proj_rep.g), e -> TripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map)));
-  epiToPGL := List(GeneratorsOfGroup(proj_rep.g), e -> TripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map));
   if Size(G) = infinity then
     # This means that when we chose scalings to put the determinant close to
     # the unit circle failed to put the requisite determinants exactly on the
@@ -225,9 +231,13 @@ LinearizeRepresentation := function(proj_rep)
   od;
 
   mono := NiceMonomorphism(Source(epiToPGL));
-  G := Image(mono);
+  if IsMatrixGroup(Range(mono)) then
+    mono := mono * NiceMonomorphism(Image(mono));
+  fi;
+  mono := mono * SmallerDegreePermutationRepresentation(Image(mono));
+  G := Group(SmallGeneratingSet(Image(mono)));
   epiToPGL := RestrictedMapping(InverseGeneralMapping(mono),G) * epiToPGL;
-  return rec(g := Image(mono), tripf := e -> MatToTrip(PreImageElm(mono, e),uvw)[1],
+  return rec(g := G, tripf := e -> MatToTrip(PreImageElm(mono, e),uvw)[1],
     term_perm_map := epiToPGL * proj_rep.term_perm_map,
     fac_perm_map := epiToPGL * proj_rep.fac_perm_map,
     epiToPGL := epiToPGL);
@@ -241,3 +251,4 @@ end;
 
 # prep := SymmetryGroupUsingPoints(uss, g, mss);
 # rep := LinearizeRepresentation(prep);
+# orbits := OrbitStructure(rep,mss);

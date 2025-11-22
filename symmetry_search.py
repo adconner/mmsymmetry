@@ -12,7 +12,7 @@ def get_map_to_rank1s(rep,orbit_structure):
         fac_perm = e ** fac_perm_map
         if M is None:
             M = gap.PermutationMat(fac_perm,3).sage()
-        blocks = [[ e * act for e in r ] for r, act in zip(M,factor_actions) ]
+        blocks = [[ act / e if e != 0 else 0 for e in r ] for r, act in zip(M,factor_actions) ]
         if fac_perm.SignPerm() == -1:
             def trans(nn):
                 n = sqrt(nn)
@@ -23,8 +23,9 @@ def get_map_to_rank1s(rep,orbit_structure):
     orbit_embeds = []
     params = 0
     for h, fac_mults in list(orbit_structure):
+        fac_mults = fac_mults.sage()
         eqs = []
-        for e, M in zip(h.GeneratorsOfGroup(), fac_mults.sage()):
+        for e, M in zip(h.GeneratorsOfGroup(), fac_mults):
             act = -action_on_trip(e,M)
             act += identity_matrix(act.nrows())
             eqs.append(act)
