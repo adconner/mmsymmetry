@@ -79,3 +79,57 @@ hom := GroupHomomorphismByImages(g,Group(acts));
 tripf := e -> MatToTrip(e ^ hom, [{m},{n},{l}])[1];
 orbits := [ {','.join([ f'\n  [ {h},\n  [ { ',\n    '.join([f'{m}' for m in ms])} ] ]' for h, ms in gap(orbit_structure)])} ];
 '''
+
+# If rep has no transpose action, then we can refer to everything in sight as
+# indices into gaps computed lists for the objects. This is to indicate that we
+# can make gap do most of the work for us. The only control we give up is in
+# the particular bases gap chooses to represent the action in, which has
+# implications if we insist to look inside a distinguished lattice (integers or
+# half gauss integers, etc) of solutions.
+def get_gap_code_simple(rep,orbit_structure):
+    m,n,l = rep['tripf'](rep['g'].Identity()).List(gap.Length).sage()
+    assert rep['fac_perm_map'].Image().Size().sage() == 1
+    group_id = rep['g'].IdSmallGroup()
+    gstd = gap.SmallGroup(group_id)
+    iso = gstd.IsomorphismGroups(rep['g'])
+    chis = gstd.ConjugacyClasses().List(f'e -> List({rep["tripf"].name()}(Representative(e)^{iso.name()}),TraceMat)')
+    chis = gap(f'List([1,2,3], i -> Character({gstd.name()},List({chis.name()}, vals -> vals[i])))')
+    irr = gstd.Irr().Set()
+    chis = gap(f'List({chis.name()}, chi -> Concatenation(List(ConstituentsOfCharacter(chi), psi -> ListWithIdenticalEntries(ScalarProduct(chi,psi), Position({irr.name()},psi)))))')
+    chis = chis.List(gap.Set)
+    subgroup_classes = gstd.ConjugacyClassesSubgroups()
+    os = []
+    for h, ms in orbit_structure:
+        homs = gap(f'List([1,2], i -> GroupHomomorphismByImages({h.name()}, Group(List({ms.name()}, m -> [[m[i][i]]]))))')
+        h = iso.PreImages(h)
+        hi = subgroup_classes.PositionProperty(f'cl -> {h.name()} in cl')
+        hstd = subgroup_classes[hi].CanonicalRepresentativeOfExternalSet()
+        e = gap.RepresentativeAction(gstd, hstd, h)
+        conjiso = gap.ConjugatorIsomorphism(hstd, e)
+        psis = gap(f'List({homs.name()}, hom -> Character({hstd.name()}, List(ConjugacyClasses({hstd.name()}), cl -> (((Representative(cl)^{conjiso.name()})^{iso.name()})^hom)[1][1] )))')
+        lin_irr = hstd.LinearCharacters().Set()
+        psis = psis.List(f'psi->Position({lin_irr.name()},psi)')
+        os.append([hi,psis])
+    return f'''g := {group_id};
+chis := {chis};
+orbits := {os};
+g := SmallGroup(g);
+irr := Set(Irr(g));
+reps := List(chis, function(chi)
+    local reps, imgs;
+    reps := List(chi, i -> IrreducibleRepresentationsDixon(g, irr[i]) );
+    imgs := List(GeneratorsOfGroup(g), e-> DirectSumMat(List(reps, rep -> e^rep)));
+    return GroupHomomorphismByImages(g, Group(imgs));
+end);
+tripf := e -> List(reps, rep->e^rep);
+subgroups := List(ConjugacyClassesSubgroups(g), CanonicalRepresentativeOfExternalSet);
+orbits := List(orbits, function(p)
+    local h, lin_irr, chis, Ms;
+    h := subgroups[p[1]];
+    lin_irr := Set(LinearCharacters(h));
+    chis := List(p[2], i -> lin_irr[i]);
+    Ms := List(GeneratorsOfGroup(h), e -> DiagonalMat([e^chis[1], e^chis[2], 1/(e^chis[1]*e^chis[2])]));
+    return [h, Ms];
+end);
+fac_perm_map := GroupHomomorphismByImages(g, ListWithIdenticalEntries(Length(GeneratorsOfGroup(g)),()));
+'''
