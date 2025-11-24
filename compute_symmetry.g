@@ -100,13 +100,9 @@ SymmetryGroupUsingPoints := function(uss, g, mss)
   end;
   
   g := SubgroupProperty(g, e -> tripForPerm111(e) <> fail);
-  g := Group(SmallGeneratingSet(g));
+  g := Group(SmallGeneratingSet(g),());
   gens := List(GeneratorsOfGroup(g), tripForPerm111);
-  if Size(g) > 1 then
-    term_perm_map := GroupHomomorphismByImages(g, Group(List(gens, p->p.perm)));
-  else
-    term_perm_map := GroupHomomorphismByImages(g, g);
-  fi;
+  term_perm_map := GroupHomomorphismByImages(g, Group(List(gens, p->p.perm),()));
   
   mono := SmallerDegreePermutationRepresentation(g);
   g := Image(mono);
@@ -132,7 +128,7 @@ OrbitStructure := function(rep,mss)
   for orbit in orbits do
     term := orbit[1];
     h := Stabilizer(rep.g, term, act);
-    h := Group(SmallGeneratingSet(h));
+    h := Group(SmallGeneratingSet(h),Identity(h));
     Add(res,[h, List(GeneratorsOfGroup(h), function(e) 
       local ms,ms_transform,cur,m;
       ms := mss[term];
@@ -235,7 +231,7 @@ LinearizeRepresentation := function(proj_rep)
     mono := mono * NiceMonomorphism(Image(mono));
   fi;
   mono := mono * SmallerDegreePermutationRepresentation(Image(mono));
-  G := Group(SmallGeneratingSet(Image(mono)));
+  G := Group(SmallGeneratingSet(Image(mono)),());
   epiToPGL := RestrictedMapping(InverseGeneralMapping(mono),G) * epiToPGL;
   return rec(g := G, tripf := e -> MatToTrip(PreImageElm(mono, e),uvw)[1],
     term_perm_map := epiToPGL * proj_rep.term_perm_map,

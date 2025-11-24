@@ -6,6 +6,7 @@ def get_map_to_rank1s(rep,orbit_structure):
     g = rep['g']
     tripf = rep['tripf']
     fac_perm_map = rep['fac_perm_map']
+    m,n,l = [int(m[1].Length()) for m in tripf(g.Identity())]
     def action_on_trip(e,M=None):
         u,v,w = [matrix(UniversalCyclotomicField(),m) for m in tripf(e)]
         factor_actions = ( w.T.tensor_product(~u), u.T.tensor_product(~v), v.T.tensor_product(~w) )
@@ -29,9 +30,12 @@ def get_map_to_rank1s(rep,orbit_structure):
             act = -action_on_trip(e,M)
             act += identity_matrix(act.nrows())
             eqs.append(act)
-        eqs = block_matrix([eqs])
         
-        embed1 = eqs.left_kernel_matrix() # can pick favorite basis here
+        if len(eqs) > 0:
+            eqs = block_matrix([eqs])
+            embed1 = eqs.left_kernel_matrix() # can pick favorite basis here
+        else:
+            embed1 = identity_matrix(UniversalCyclotomicField(), l*m+m*n+n*l)
         
         embeds = []
         for e in g.RightCosets(h):
@@ -46,7 +50,6 @@ def get_map_to_rank1s(rep,orbit_structure):
         orbit_embeds.append((embeds,xbounds))
         params += embed1.nrows()
 
-    m,n,l = [int(m[1].Length()) for m in tripf(g.Identity())]
     def param_to_trips(x,np=np):
         res = np.vstack([ np.einsum('ijk,i->jk', embed, x[xstart:xend]) for embed, (xstart, xend) in orbit_embeds ])
         return (res[:, :l*m].T, res[:, l*m:l*m+m*n].T, res[:, l*m+m*n:].T)
@@ -100,7 +103,7 @@ def get_gap_code_simple(rep,orbit_structure):
     subgroup_classes = gstd.ConjugacyClassesSubgroups()
     os = []
     for h, ms in orbit_structure:
-        homs = gap(f'List([1,2], i -> GroupHomomorphismByImages({h.name()}, Group(List({ms.name()}, m -> [[m[i][i]]]))))')
+        homs = gap(f'List([1,2], i -> GroupHomomorphismByImages({h.name()}, Group(List({ms.name()}, m -> [[m[i][i]]]),[[1]])))')
         h = iso.PreImages(h)
         hi = subgroup_classes.PositionProperty(f'cl -> {h.name()} in cl')
         hstd = subgroup_classes[hi].CanonicalRepresentativeOfExternalSet()
