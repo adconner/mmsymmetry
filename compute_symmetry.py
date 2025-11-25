@@ -31,7 +31,8 @@
 # general position to quickly determine a PGL equivalence if it exists. This is
 # done in symmetry_group below
 
-from sage.all import gap,matrix,UniversalCyclotomicField
+from sage.all import gap,matrix,UniversalCyclotomicField,block_matrix
+from copy import copy
 from itertools import groupby
 import util
 
@@ -47,12 +48,19 @@ def symmetry_group(mss):
            [row(b) for a,b,c in mss111],
            [column(c) for a,b,c in mss111],
            [row(c) for a,b,c in mss111]]
+    if len(mss111) == 0:
+        raise ValueError("symmetry_group: Currently requires triples of type 1,1,1 to work")
     g = approximate_symmetry_group(mss111,2)
     print(f'Containing symmetry group has order {g.Order()}')
     Ms = [matrix([column(ms[(i+1)%3]) for ms in mss111]).T for i in range(3)]
     gap.Read('"compute_symmetry.g"');
     # print(f'uss:={gap(uss)};\ng:={gap(g)};\nmss:={gap(mss)};')
-    return util.rec_to_dict(gap.SymmetryGroupUsingPoints(uss, g, mss))
+    res = gap.SymmetryGroupUsingPoints(uss, g, mss)
+    if res == gap('fail'):
+        raise ValueError("symmetry_group: Currently requires triples of type 1,1,1 to work such "
+            "that the set of column spaces do not respect any nontrivial direct sum decomposition in "
+            "any of the three factors")
+    return util.rec_to_dict(res)
 
 # View a ot b ot c in A ot B ot C as living in A op B op C / CC^2 with our
 # decomposition terms having distinguished lifts to A op B op C. Similarly, we

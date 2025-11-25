@@ -201,7 +201,7 @@ LinearizeRepresentation := function(proj_rep)
     fac_perm := e ^ proj_rep.fac_perm_map;
     return MatToTrip(TripToMat(trip, fac_perm), uvw) = [trip, fac_perm];
   end));
-  G := Group(List(GeneratorsOfGroup(proj_rep.g), e -> TripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map)));
+  G := Group(List(GeneratorsOfGroup(proj_rep.g), e -> TripToMat(proj_rep.tripf(e), e ^ proj_rep.fac_perm_map)), IdentityMat(2*Sum(uvw)));
   if Size(G) = infinity then
     # This means that when we chose scalings to put the determinant close to
     # the unit circle failed to put the requisite determinants exactly on the

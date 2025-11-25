@@ -5298,7 +5298,7 @@ decomposition_555 = (np.array([[ 0.,  0.,  0., -1., -0., -0.,  0.,  0., -0., -0.
          1., -0.]], dtype=np.float32))
 decompositions = [decomposition_245, decomposition_247, decomposition_248, decomposition_256, decomposition_333, decomposition_346, decomposition_347, decomposition_348, decomposition_356, decomposition_357, decomposition_444, decomposition_445, decomposition_447, decomposition_456, decomposition_555]
 
-from sage.all import UniversalCyclotomicField, matrix, QQ, I
+from sage.all import UniversalCyclotomicField, matrix, QQ, I, pretty_print
 
 def ae_decomp_to_mss(U,V,W):
     m = np.array([1,1,0,0,1,1,1,0,1]).reshape(3,3)
@@ -5312,3 +5312,39 @@ def ae_decomp_to_mss(U,V,W):
 
 decompositions = [ae_decomp_to_mss(*d) for d in decompositions]
 
+from compute_symmetry import symmetry_group, linearize_representation, orbit_structure
+
+def ae_decomps_compute_symmetry():
+    for mss, (m,n,l) in zip(decompositions, [(2,4,5), (2,4,7), (2,4,8), (2,5,6),
+                                             (3,3,3), (3,4,6), (3,4,7), (3,4,8),
+                                             (3,5,6), (3,5,7), (4,4,4), (4,4,5),
+                                             (4,4,7), (4,5,6), (5,5,5)]):
+        print(f"Checking ({m},{n},{l}) decomp...")
+        try:
+            rep=symmetry_group(mss)
+        except ValueError as e:
+            print(e)
+            print("\n\n")
+            continue
+        print(f'Group has order {rep['g'].Size()}: {rep['g'].StructureDescription()}')
+        for e in rep['g'].GeneratorsOfGroup():
+            pretty_print([matrix(m.sage()) for m in rep['tripf'](e)])
+            print(e ** rep['fac_perm_map'])
+            print()
+        print("Linearizing...")
+        try:
+            rep=linearize_representation(rep)
+            for e in rep['g'].GeneratorsOfGroup():
+                pretty_print([matrix(m.sage()) for m in rep['tripf'](e)])
+                print(e ** rep['fac_perm_map'])
+                print()
+            print()
+        except ValueError:
+            print("Could not lift to linear representation")
+        print('Finding orbit structure...')
+        orbs=orbit_structure(rep,mss)
+        print(orbs)
+        print("\n\n")
+
+if __name__ == '__main__':
+    ae_decomps_compute_symmetry()
