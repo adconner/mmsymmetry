@@ -1,5 +1,5 @@
 let
-  pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/tarball/9ca440cd0acccda37e3e00120918e1165028ff36") { 
+  pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/tarball/b9491974f02dadeb5acca22649ccbd89a6a81afb") { 
     config = {
       allowUnfree = true;
     }; 
