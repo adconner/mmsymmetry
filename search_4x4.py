@@ -77,13 +77,23 @@ def loss_fn(x,it,key):
     dec = rank1s(x,jnp)
     S = jnp.einsum('ir,jr,kr->ijk', *dec)
     E = S-T
+
+    dec_quantized = jax.tree.map(lambda f: jnp.round(f*2)/2,dec)
+    S_quantized = jnp.einsum('ir,jr,kr->ijk', *dec_quantized)
+    E_quantized = S_quantized - T
+    quantized_reconstruction_loss = jnp.mean(jnp.real(E_quantized*E_quantized.conj()))
   
     reconstruction_loss = jnp.mean(jnp.real(E*E.conj()))
+    progress = it / numit
+    
+    quantization_loss = 0.0
+    for f in dec:
+        quantization_loss += ((1-jnp.cos(2*jnp.pi*progress))/2) * 0.02 * jnp.mean(optax.l2_loss(jnp.abs(f - jnp.round(f*2)/2)))
 
-    # regularization and quantization terms may be added
-    loss = reconstruction_loss
+    loss = reconstruction_loss + quantization_loss
   
-    return loss, { 'reconstruction loss' : reconstruction_loss }
+    return loss, { 'reconstruction loss' : reconstruction_loss, 'quantization loss': quantization_loss,
+                  'quantized_reconstruction_loss' : quantized_reconstruction_loss }
   
 start_learning_rate = 0.1
 optimizer = optax.adam(start_learning_rate)
