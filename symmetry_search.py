@@ -51,7 +51,7 @@ def get_map_to_rank1s(rep,orbit_structure):
         params += embed1.nrows()
 
     def param_to_trips(x,np=np):
-        res = np.vstack([ np.einsum('ijk,i->jk', embed, x[xstart:xend]) for embed, (xstart, xend) in orbit_embeds ])
+        res = np.vstack([ np.einsum('ijk,i->jk', embed.astype(x.dtype), x[xstart:xend]) for embed, (xstart, xend) in orbit_embeds ])
         return (res[:, :l*m].T, res[:, l*m:l*m+m*n].T, res[:, l*m+m*n:].T)
     
     return param_to_trips, params, orbit_embeds
@@ -110,7 +110,7 @@ def get_gap_code_simple(rep,orbit_structure):
         e = gap.RepresentativeAction(gstd, hstd, h)
         conjiso = gap.ConjugatorIsomorphism(hstd, e)
         psis = gap(f'List({homs.name()}, hom -> Character({hstd.name()}, List(ConjugacyClasses({hstd.name()}), cl -> (((Representative(cl)^{conjiso.name()})^{iso.name()})^hom)[1][1] )))')
-        lin_irr = hstd.LinearCharacters().Set()
+        lin_irr = hstd.LinearCharacters().SortedList()
         psis = psis.List(f'psi->Position({lin_irr.name()},psi)')
         os.append([hi,psis])
     return f'''g := {group_id};

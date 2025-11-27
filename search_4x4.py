@@ -77,18 +77,15 @@ def loss_fn(x,it,key):
     dec = rank1s(x,jnp)
     S = jnp.einsum('ir,jr,kr->ijk', *dec)
     E = S-T
+    reconstruction_loss = jnp.mean(jnp.real(E*E.conj()))
 
     dec_quantized = jax.tree.map(lambda f: jnp.round(f*2)/2,dec)
     S_quantized = jnp.einsum('ir,jr,kr->ijk', *dec_quantized)
     E_quantized = S_quantized - T
     quantized_reconstruction_loss = jnp.mean(jnp.real(E_quantized*E_quantized.conj()))
-  
-    reconstruction_loss = jnp.mean(jnp.real(E*E.conj()))
-    progress = it / numit
-    
     quantization_loss = 0.0
     for f in dec:
-        quantization_loss += ((1-jnp.cos(2*jnp.pi*progress))/2) * 0.02 * jnp.mean(optax.l2_loss(jnp.abs(f - jnp.round(f*2)/2)))
+        quantization_loss += 0.005 * jnp.mean(optax.l2_loss(jnp.abs(f - jnp.round(f*2)/2)))
 
     loss = reconstruction_loss + quantization_loss
   
@@ -112,6 +109,7 @@ def update_function(x, opt_state, key, it):
 @jax.jit
 def extra_info(opt_state, loss, x, info):
     lossmult = T.size
+    solutions = jnp.count_nonzero(info['quantized_reconstruction_loss'] == 0.0)
     besti = jnp.argpartition(loss,print_num-1)[:print_num]
     besti = besti[jnp.argsort(loss[besti])]
     x = jax.tree.map(lambda e: e[besti], x)
@@ -119,6 +117,7 @@ def extra_info(opt_state, loss, x, info):
     info['example index'] = besti
     maxabs = jax.vmap(lambda x: jnp.max(jnp.abs(x)))(x)
     info['maximum coefficient'] = maxabs
+    info['solutions'] = solutions
     return info
 
 for it in range(numit):
